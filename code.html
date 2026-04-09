@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DIMENSIONAL_DEV — Portfolio</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+  <!-- GSAP + ScrollTrigger -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+  <style>
+    /* ── Design Tokens ─────────────────────────────────────── */
+    :root {
+      --bg:           #07101f;
+      --surface-low:  #0e1a2e;
+      --surface:      #131f34;
+      --surface-high: #1c2a42;
+      --surface-top:  #243050;
+      --border:       rgba(100,130,200,0.12);
+      --border-glow:  rgba(100,180,255,0.3);
+      --primary:      #adc6ff;
+      --primary-dim:  #4d8eff;
+      --tertiary:     #4edea3;
+      --text:         #dae2fd;
+      --text-muted:   #8898b8;
+      --font-head:    'Space Grotesk', sans-serif;
+      --font-mono:    'JetBrains Mono', monospace;
+    }
+
+    /* ── Base ──────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-head);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      vertical-align: middle;
+    }
+
+    /* ── Three.js Canvas ───────────────────────────────────── */
+    #bg-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      display: block;
+    }
+
+    /* Ensure all page content sits above the canvas */
+    #navbar, #mobile-menu, section, footer, #toast {
+      position: relative;
+      z-index: 1;
+    }
+
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--primary-dim); border-radius: 2px; }
+
+    /* ── Utility ───────────────────────────────────────────── */
+    .text-primary-clr   { color: var(--primary); }
+    .text-tertiary-clr  { color: var(--tertiary); }
+    .text-muted-clr     { color: var(--text-muted); }
+
+    .gradient-text {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--tertiary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .glass {
+      background: rgba(19,31,52,0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border);
+    }
+
+    .glass-panel {
+      background: rgba(28,42,66,0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border);
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      background: var(--surface-top);
+      border: 1px solid var(--border);
+      color: var(--primary);
+    }
+
+    /* ── Grid dots bg ──────────────────────────────────────── */
+    .grid-bg {
+      position: absolute; inset: 0; z-index: 0; pointer-events: none;
+      background-image: radial-gradient(circle, rgba(66,71,84,0.4) 1px, transparent 1px);
+      background-size: 36px 36px;
+    }
+
+    /* ── Blob glows ────────────────────────────────────────── */
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(100px);
+    }
+    .blob-blue  { background: rgba(77,142,255,0.04); }
+    .blob-teal  { background: rgba(78,222,163,0.03); }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       NAV
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    #navbar {
+      position: fixed; top: 0; left: 0; width: 100%;
+      z-index: 1000;
+      padding: 16px 0;
+      border-bottom: 1px solid rgba(100,130,200,0.08);
+      background: rgba(7,16,31,0.6);
+      backdrop-filter: blur(20px);
+      transition: background .3s;
+    }
+    #navbar.scrolled { background: rgba(7,16,31,0.92); }
+
+    .nav-logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -.04em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #b8d4ff, #4d8eff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .nav-link-custom {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      transition: color .2s;
+      position: relative;
+    }
+    .nav-link-custom::after {
+      content: '';
+      position: absolute;
+      bottom: -4px; left: 0;
+      width: 0; height: 2px;
+      background: var(--primary);
+      transition: width .25s;
+    }
+    .nav-link-custom:hover { color: var(--primary); }
+    .nav-link-custom:hover::after { width: 100%; }
+    .nav-link-custom.active { color: var(--primary); }
+    .nav-link-custom.active::after { width: 100%; }
+
+    /* Mobile menu */
+    #mobile-menu {
+      display: none;
+      position: fixed;
+      top: 68px; left: 0; right: 0;
+      background: rgba(7,16,31,0.97);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      z-index: 999;
+      padding: 24px 32px;
+      flex-direction: column;
+      gap: 20px;
+    }
+    #mobile-menu.open { display: flex; }
+    #hamburger { background: none; border: none; cursor: pointer; padding: 8px; }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       SECTIONS COMMON
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    section { padding: 120px 0; position: relative; overflow: hidden; }
+    section:first-of-type { padding-top: 100px; }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       HERO
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    #hero { min-height: 100vh; display: flex; align-items: center; padding-top: 0; }
+
+    .hero-title {
+      font-size: clamp(3.5rem, 10vw, 7.5rem);
+      font-weight: 700;
+      line-height: .9;
+      letter-spacing: -.04em;
+    }
+
+    .avatar-ring {
+      width: clamp(260px, 35vw, 360px);
+      height: clamp(260px, 35vw, 360px);
+      position: relative;
+      margin: 0 auto;
+    }
+    .avatar-ring::before, .avatar-ring::after {
+      content: '';
+      position: absolute; inset: -1px;
+      border-radius: 50%;
+      border: 1px solid rgba(173,198,255,0.15);
+    }
+    .avatar-ring::after { inset: -16px; border-color: rgba(173,198,255,0.06); }
+
+    .avatar-img {
+      width: 100%; height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid var(--border);
+      mix-blend-mode: lighten;
+    }
+
+    .floating-tag {
+      position: absolute;
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--tertiary);
+      animation: pulse-anim 2s infinite;
+      box-shadow: 0 0 8px var(--tertiary);
+    }
+    @keyframes pulse-anim {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: .5; transform: scale(.7); }
+    }
+
+    .btn-primary {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dim) 100%);
+      color: #002e6a;
+      border: none;
+      border-radius: 12px;
+      font-family: var(--font-head);
+      font-weight: 700;
+      font-size: .9rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: box-shadow .3s, transform .2s;
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 28px rgba(77,142,255,0.45);
+      transform: translateY(-2px);
+    }
+
+    .btn-ghost {
+      padding: 14px 32px;
+      background: rgba(28,42,66,0.6);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-family: var(--font-head);
+      font-weight: 600;
+      font-size: .9rem;
+      letter-spacing: .04em;
+      cursor: pointer;
+      transition: background .25s, border-color .25s, transform .2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-ghost:hover {
+      background: var(--surface-high);
+      border-color: var(--border-glow);
+      transform: translateY(-2px);
+    }
+
+    /* Stat cards */
+    .stat-card {
+      padding: 32px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: rgba(19,31,52,0.6);
+      transition: border-color .3s;
+    }
+    .stat-card:hover { border-color: var(--border-glow); }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       3D CARD HOVER (GSAP controlled via JS)
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .card-3d {
+      transform-style: preserve-3d;
+      transform-origin: center center;
+      will-change: transform;
+      transition: box-shadow .4s ease;
+      cursor: pointer;
+    }
+    .card-3d .card-shine {
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(173,198,255,0.12) 0%, transparent 70%);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .3s;
+    }
+    .card-3d:hover .card-shine { opacity: 1; }
+    .card-3d:hover { box-shadow: 0 32px 64px -16px rgba(0,0,0,0.7), 0 0 40px -20px rgba(77,142,255,0.25); }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       PROJECTS
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .project-card {
+      border-radius: 20px;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      position: relative;
+    }
+
+    .project-img {
+      width: 100%; aspect-ratio: 16/9;
+      object-fit: cover;
+      display: block;
+      transition: opacity .5s, transform .7s;
+      opacity: .75;
+    }
+    .card-3d:hover .project-img { opacity: 1; transform: scale(1.04); }
+
+    .project-label {
+      position: absolute;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: .75rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .link-arrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--primary);
+      text-decoration: none;
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      transition: gap .2s, color .2s;
+    }
+    .link-arrow:hover { gap: 12px; color: #fff; }
+
+    /* Filter buttons */
+    .filter-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-family: var(--font-head);
+      font-size: .85rem;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 4px 0;
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%;
+      transition: color .2s;
+    }
+    .filter-btn.active, .filter-btn:hover { color: var(--primary); font-weight: 700; }
+
+    .filter-count {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--surface-high);
+      color: var(--text-muted);
+    }
+    .filter-btn.active .filter-count { background: rgba(77,142,255,0.12); color: var(--primary); }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       TECH STACK (bento)
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .bento-card {
+      border-radius: 16px;
+      background: rgba(28,42,66,0.5);
+      border: 1px solid var(--border);
+      padding: 32px;
+      position: relative;
+      overflow: hidden;
+      transition: background .3s, border-color .3s;
+    }
+    .bento-card:hover { background: var(--surface-high); border-color: var(--border-glow); }
+
+    .tech-chip {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      background: rgba(58,74,95,0.4);
+      border: 1px solid var(--border);
+      transition: border-color .3s;
+    }
+    .tech-chip:hover { border-color: rgba(173,198,255,0.25); }
+    .tech-chip .chip-label { font-weight: 700; font-size: .875rem; }
+    .tech-chip .chip-sub   { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-muted); }
+
+    .skill-badge {
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: var(--surface-top);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       CONTACT
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .form-field {
+      width: 100%;
+      padding: 16px 20px;
+      background: rgba(6,14,32,0.8);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-family: var(--font-head);
+      font-size: .9rem;
+      transition: border-color .25s, box-shadow .25s;
+      outline: none;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .form-field::placeholder { color: var(--text-muted); opacity: .5; }
+    .form-field:focus { border-color: rgba(173,198,255,0.4); box-shadow: 0 0 0 3px rgba(77,142,255,0.1), inset 0 2px 4px rgba(0,0,0,0.3); }
+    .form-field option { background: var(--surface); }
+
+    .form-label {
+      display: block;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .social-btn {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      background: rgba(6,14,32,0.8);
+      border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color .25s, background .25s, transform .2s;
+      text-decoration: none;
+    }
+    .social-btn:hover { border-color: var(--border-glow); background: var(--surface); transform: translateY(-3px); }
+    .social-btn img { width: 22px; height: 22px; opacity: .6; transition: opacity .25s; }
+    .social-btn:hover img { opacity: 1; }
+
+    /* Form toast */
+    #toast {
+      position: fixed; bottom: 32px; right: 32px;
+      padding: 14px 24px;
+      background: var(--surface-high);
+      border: 1px solid var(--tertiary);
+      border-radius: 12px;
+      color: var(--tertiary);
+      font-size: .85rem;
+      font-weight: 600;
+      z-index: 9999;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: transform .35s cubic-bezier(.34,1.56,.64,1), opacity .35s;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       TERMINAL SECTION
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .terminal-box {
+      background: rgba(6,14,32,0.9);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .terminal-header {
+      padding: 12px 20px;
+      background: var(--surface-high);
+      display: flex; align-items: center; gap: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot-red   { background: #ff5f57; }
+    .dot-yellow{ background: #febc2e; }
+    .dot-green { background: #28c840; }
+    .terminal-body { padding: 24px; font-family: var(--font-mono); font-size: .8rem; line-height: 1.8; }
+    .t-prompt { color: var(--tertiary); }
+    .t-cmd    { color: var(--primary); }
+    .t-out    { color: var(--text-muted); }
+    .t-cursor { display: inline-block; width: 8px; height: 14px; background: var(--primary); animation: blink 1s infinite; vertical-align: middle; }
+    @keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       FOOTER
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    footer {
+      border-top: 1px solid rgba(100,130,200,0.08);
+      background: rgba(4,10,20,0.95);
+      padding: 40px 0;
+    }
+    .footer-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 10px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      transition: color .2s;
+    }
+    .footer-link:hover { color: var(--tertiary); }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       SCROLL REVEAL
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .reveal { opacity: 0; transform: translateY(30px); }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       RESPONSIVE TWEAKS
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    @media (max-width: 768px) {
+      .hero-title { font-size: 3.2rem; }
+      .floating-tag { display: none !important; }
+      section { padding: 80px 0; }
+    }
+  </style>
+</head>
+
+<body>
+<!-- Three.js Background Canvas -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ NAV ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<nav id="navbar">
+  <div class="container d-flex align-items-center justify-content-between">
+    <div class="d-flex align-items-center gap-2">
+      <span class="material-symbols-outlined text-primary-clr" style="font-size:20px">terminal</span>
+      <span class="nav-logo">DIMENSIONAL_DEV</span>
+    </div>
+    <div class="d-none d-md-flex align-items-center gap-4">
+      <a class="nav-link-custom active" href="#hero">Terminal</a>
+      <a class="nav-link-custom" href="#projects">Architecture</a>
+      <a class="nav-link-custom" href="#stack">Stack</a>
+      <a class="nav-link-custom" href="#contact">Contact</a>
+    </div>
+    <button id="hamburger" class="d-md-none" aria-label="Menu">
+      <span class="material-symbols-outlined text-primary-clr">menu</span>
+    </button>
+  </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div id="mobile-menu">
+  <a class="nav-link-custom" href="#hero" onclick="closeMobileMenu()">Terminal</a>
+  <a class="nav-link-custom" href="#projects" onclick="closeMobileMenu()">Architecture</a>
+  <a class="nav-link-custom" href="#stack" onclick="closeMobileMenu()">Stack</a>
+  <a class="nav-link-custom" href="#contact" onclick="closeMobileMenu()">Contact</a>
+</div>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ HERO ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section id="hero">
+  <div class="grid-bg"></div>
+  <div class="blob blob-blue" style="width:500px;height:500px;top:-100px;right:-100px;"></div>
+  <div class="blob blob-teal" style="width:350px;height:350px;bottom:80px;left:-80px;"></div>
+
+  <div class="container position-relative" style="z-index:1">
+    <div class="row align-items-center gy-5">
+
+      <!-- Left: text -->
+      <div class="col-lg-6">
+        <div class="reveal">
+          <span style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;font-weight:700;" class="text-tertiary-clr d-flex align-items-center gap-2 mb-4">
+            <span class="pulse-dot"></span> Available for Projects
+          </span>
+          <h1 class="hero-title mb-4">
+            Architecting<br>
+            <span class="gradient-text">Digital Realities</span>
+          </h1>
+          <p class="text-muted-clr mb-5" style="font-size:1.1rem;line-height:1.7;max-width:480px;">
+            Senior software architect specializing in high-fidelity 3D interfaces and performant spatial computing systems. Bridging geometric precision and user intent.
+          </p>
+          <div class="d-flex flex-wrap gap-3 mb-5">
+            <button class="btn-primary" onclick="document.querySelector('#projects').scrollIntoView({behavior:'smooth'})">View Projects</button>
+            <button class="btn-ghost" onclick="document.querySelector('#stack').scrollIntoView({behavior:'smooth'})">
+              <span class="material-symbols-outlined" style="font-size:18px">code</span> Technical Stack
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: avatar -->
+      <div class="col-lg-6 d-flex justify-content-center">
+        <div class="reveal" style="animation-delay:.2s">
+          <div class="avatar-ring card-3d" style="background:rgba(19,31,52,0.6);border-radius:50%;padding:16px;border:1px solid var(--border);">
+            <div class="card-shine" style="border-radius:50%"></div>
+            <img class="avatar-img" alt="Developer Avatar"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDgBMlwsNLJxSIFke_pRawkWRtNl0u6U5ycYBvgqpQsRsYD0K_YaAje6W-x1z1J3QN-k7dviy0tyGHEL_rprOldjiJCOxigRV7JCTE8Fw8kOBDjuEzMcpis0jRJ33imdPfeJuAf7WaSaVtUQfsJ3nXzDK2ZcnLax4o94sjM8NBZV0V-3BdFW5CtWZy1tw5hT0aSYd0EXaTNVPt7QYmSnnkrAGK9-LeH-ydogwL2mUe8IZlnk70qSxww2t-_nhslAx98A-nGr2DKnPho"
+              onerror="this.src='https://via.placeholder.com/360x360/131f34/adc6ff?text=DEV'" />
+
+            <!-- Floating tags -->
+            <div class="floating-tag glass" style="top:-20px;right:-40px;color:var(--tertiary);">
+              <span class="material-symbols-outlined" style="font-size:14px;color:var(--tertiary)">memory</span>
+              System: STABLE
+            </div>
+            <div class="floating-tag glass" style="bottom:40px;left:-60px;color:var(--primary);">
+              <span class="material-symbols-outlined" style="font-size:14px;color:var(--primary)">layers</span>
+              Z-Axis Optimized
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stat cards -->
+    <div class="row g-4 mt-5">
+      <div class="col-md-4 reveal">
+        <div class="stat-card card-3d position-relative">
+          <div class="card-shine" style="border-radius:20px"></div>
+          <span class="material-symbols-outlined text-tertiary-clr mb-3 d-block" style="font-size:28px">view_in_ar</span>
+          <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">Spatial UI</h3>
+          <p class="text-muted-clr" style="font-size:.85rem;line-height:1.6;">Developing immersive interfaces that leverage depth, shadow, and physics.</p>
+        </div>
+      </div>
+      <div class="col-md-4 reveal">
+        <div class="stat-card card-3d position-relative">
+          <div class="card-shine" style="border-radius:20px"></div>
+          <span class="material-symbols-outlined text-primary-clr mb-3 d-block" style="font-size:28px">precision_manufacturing</span>
+          <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">Precision Code</h3>
+          <p class="text-muted-clr" style="font-size:.85rem;line-height:1.6;">Highly optimized algorithms for real-time rendering and data visualization.</p>
+        </div>
+      </div>
+      <div class="col-md-4 reveal">
+        <div class="stat-card card-3d position-relative">
+          <div class="card-shine" style="border-radius:20px"></div>
+          <span class="material-symbols-outlined text-primary-clr mb-3 d-block" style="font-size:28px;color:#93c5fd">hub</span>
+          <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:8px;">Systems Arch</h3>
+          <p class="text-muted-clr" style="font-size:.85rem;line-height:1.6;">Scalable cloud-native backends designed for high-concurrency 3D environments.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ PROJECTS ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section id="projects" style="background:linear-gradient(to bottom, var(--bg), var(--surface-low));">
+  <div class="grid-bg" style="opacity:.12"></div>
+  <div class="container position-relative" style="z-index:1">
+
+    <!-- Header -->
+    <div class="row mb-5 reveal">
+      <div class="col-lg-8">
+        <span style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;font-weight:700;" class="text-tertiary-clr d-flex align-items-center gap-2 mb-3">
+          <span class="pulse-dot"></span> Active Deployments
+        </span>
+        <h2 style="font-size:clamp(2.5rem,6vw,5rem);font-weight:700;letter-spacing:-.04em;line-height:.95" class="mb-4">
+          Architectural <span class="gradient-text">Synthesis</span>
+        </h2>
+        <p class="text-muted-clr" style="font-size:1.05rem;line-height:1.7;max-width:560px;">
+          A collection of high-fidelity systems engineered for scale. Structural digital environments built with precision and technical mastery.
+        </p>
+      </div>
+    </div>
+
+    <div class="row">
+      <!-- Sidebar filters -->
+      <div class="col-lg-3 d-none d-lg-block">
+        <div style="position:sticky;top:100px">
+          <p style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:16px;">Filter by Class</p>
+          <div class="d-flex flex-column gap-3 mb-5">
+            <button class="filter-btn active" data-filter="all">All Systems <span class="filter-count">03</span></button>
+            <button class="filter-btn" data-filter="infrastructure">Infrastructure <span class="filter-count">01</span></button>
+            <button class="filter-btn" data-filter="realtime">Real-time OS <span class="filter-count">01</span></button>
+            <button class="filter-btn" data-filter="ai">AI Modules <span class="filter-count">01</span></button>
+          </div>
+          <div class="glass-panel" style="padding:24px;border-radius:14px">
+            <span class="material-symbols-outlined text-tertiary-clr mb-3 d-block">memory</span>
+            <p class="text-muted-clr" style="font-size:.75rem;line-height:1.8;">
+              System status: <span class="text-tertiary-clr" style="font-weight:700;">STABLE</span><br>
+              Uptime: 99.9%<br>
+              Build: v2.0.4
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Project cards -->
+      <div class="col-lg-9">
+        <div class="d-flex flex-column gap-5" id="project-list">
+
+          <!-- Project 1 -->
+          <article class="project-card card-3d position-relative reveal" data-category="infrastructure">
+            <div class="card-shine"></div>
+            <div class="row g-0 align-items-center">
+              <div class="col-md-7 position-relative" style="overflow:hidden">
+                <img class="project-img" alt="Neural Mesh Gateway"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuAR013yzkcvwJ5v4P-XvL8ascE5fkxPMfasKjoNs1pAyxuKo88jikaUtCNnNUTagoQlsyheySY7xs6K_VxmnZpPGaN2oTfYvkHiHdfpgy4UAiwlIW0YXYTl7AfVtIrU9BBH6esPn11pb64_st--7_2Wa7pqLgWQ7UCJwmLwSLx7M444RPf2bMcfmC6N7YI7Zv-SXc95Uc0ZIVA2fH5B648m9TW8rWrJxUl99jxGq9Rb3qYnx9JoSQVlHU5wxoMcIX0KBTdr6369qXpW"
+                  onerror="this.style.background='var(--surface-high)';this.alt='Project Image'" />
+                <div class="project-label glass text-primary-clr" style="bottom:16px;right:16px">CORE_X_INFRA</div>
+              </div>
+              <div class="col-md-5 p-4 p-lg-5">
+                <div class="d-flex gap-2 mb-3">
+                  <span class="pill">Rust</span>
+                  <span class="pill">WASM</span>
+                </div>
+                <h3 style="font-size:1.6rem;font-weight:700;margin-bottom:12px;">Neural Mesh Gateway</h3>
+                <p class="text-muted-clr mb-4" style="font-size:.85rem;line-height:1.7;">
+                  A high-concurrency packet routing engine for decentralized neural networks. Zero-copy serialization for sub-millisecond latency.
+                </p>
+                <a href="#" class="link-arrow">
+                  Inspect Source <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>
+                </a>
+              </div>
+            </div>
+          </article>
+
+          <!-- Project 2 -->
+          <article class="project-card card-3d position-relative reveal" data-category="realtime">
+            <div class="card-shine"></div>
+            <div class="row g-0 align-items-center flex-md-row-reverse">
+              <div class="col-md-7 position-relative" style="overflow:hidden">
+                <img class="project-img" alt="Synth View"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuD9ynVPaM1C8N-nnu6isZW_E_YCivH_4Uvib2ndNiA4sg_xQrrBl9LKXSj20QkV5hdl_Bt47vcXWp6FGyGpmC_g9SEtBUHinl-LyX8kgwHxK5mhg5eByglHZ2jGDJ5Feqn8ZmK7zWvJjWYi9yFn3sCdCCxvZlH6g_H0ZONRomR5ncEgejJ73ySsY3hNV3ioVkgZSR_DN1wmnSMTr7QdRka-HxtpIXAXce3RS8R9nFo02mQpl6Iy8WQ56eZ3estaLmV83bAWNYXViD4N"
+                  onerror="this.style.background='var(--surface-high)'" />
+                <div class="project-label glass text-tertiary-clr" style="top:16px;left:16px">SYNTH_VIEW_v4</div>
+              </div>
+              <div class="col-md-5 p-4 p-lg-5">
+                <div class="d-flex gap-2 mb-3">
+                  <span class="pill">WebGL</span>
+                  <span class="pill">Three.js</span>
+                </div>
+                <h3 style="font-size:1.6rem;font-weight:700;margin-bottom:12px;">Quantum Visualizer</h3>
+                <p class="text-muted-clr mb-4" style="font-size:.85rem;line-height:1.7;">
+                  Real-time 3D data visualization engine. Renders complex node networks using WebGPU for 60fps performance at scale.
+                </p>
+                <a href="#" class="link-arrow">
+                  View Blueprint <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>
+                </a>
+              </div>
+            </div>
+          </article>
+
+          <!-- Project 3 - large -->
+          <article class="reveal card-3d position-relative" data-category="ai"
+            style="background:var(--surface-low);border:1px solid var(--border);border-radius:20px;padding:48px;">
+            <div class="card-shine" style="border-radius:20px"></div>
+            <div class="row align-items-center g-5">
+              <div class="col-md-6">
+                <div style="width:48px;height:48px;background:rgba(173,198,255,0.15);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:20px">
+                  <span class="material-symbols-outlined text-primary-clr">memory</span>
+                </div>
+                <h3 style="font-size:2rem;font-weight:700;margin-bottom:16px;">Architectural Kernel</h3>
+                <p class="text-muted-clr mb-4" style="font-size:.9rem;line-height:1.7;">
+                  A custom micro-kernel built for edge computing environments. Optimized for low-memory footprints while maintaining security through hardware-level isolation.
+                </p>
+                <div class="d-flex flex-wrap gap-2 mb-5">
+                  <span class="skill-badge">C++20</span>
+                  <span class="skill-badge">Kernel Dev</span>
+                  <span class="skill-badge">x86_64</span>
+                </div>
+                <button class="btn-primary">Access Repository</button>
+              </div>
+              <div class="col-md-6" style="border-radius:16px;overflow:hidden;min-height:280px;position:relative">
+                <img style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;transition:transform .7s" class="group-img"
+                  alt="Circuit"
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuBhwgIgRRXl2aMszd1HP0f4En2ACDlQqxHgsPYte3WbeQL_Hefna3KHs08RBkm_XE1SgnJpDjLqhyCwnLFv2MTgmNRkDbwlCbJ_Swk30k80ciILGa5lcb7yEFK7uxXaYi7LfQRa7i9B6bB3osubMeiEHKS6eYMaomaLalHbf2QXdtA3sz0IX_gh1h9qdPF9pXnYALFXbOTcRmdKMe8rlaouizaSOMVa1JMblIXLM5iD2_2Pe4CQP9IyKILZPY1IcNAXWOxesO38AQlO"
+                  onerror="this.style.background='var(--surface-high)'" />
+                <div style="position:absolute;inset:0;background:linear-gradient(to top, var(--surface-low) 0%, transparent 60%)"></div>
+                <span style="position:absolute;bottom:16px;left:16px;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--primary)">Edge Computing Module</span>
+              </div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ STACK ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section id="stack">
+  <div class="blob blob-blue" style="width:400px;height:400px;top:0;right:0;"></div>
+  <div class="blob blob-teal" style="width:300px;height:300px;bottom:0;left:0;"></div>
+  <div class="container position-relative" style="z-index:1">
+
+    <div class="row mb-5 reveal">
+      <div class="col-lg-8">
+        <div class="d-flex align-items-center gap-3 mb-4">
+          <div style="height:1px;width:40px;background:var(--primary)"></div>
+          <span style="font-size:11px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--primary)">System Registry</span>
+        </div>
+        <h2 style="font-size:clamp(2.5rem,6vw,5rem);font-weight:700;letter-spacing:-.04em;line-height:.95" class="mb-4">
+          Technological <span class="gradient-text">Architectures</span>
+        </h2>
+        <p class="text-muted-clr" style="font-size:1.05rem;line-height:1.7;max-width:560px;">
+          Core languages, frameworks, and tools to construct high-fidelity spatial experiences and robust distributed systems.
+        </p>
+      </div>
+    </div>
+
+    <!-- Bento Grid -->
+    <div class="row g-4">
+
+      <!-- Frontend Core (large) -->
+      <div class="col-lg-8 reveal">
+        <div class="bento-card card-3d h-100 position-relative">
+          <div class="card-shine" style="border-radius:16px"></div>
+          <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+              <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:6px;">Interface Engine</h3>
+              <p class="text-muted-clr" style="font-size:.83rem;">Reactive frameworks and real-time rendering logic.</p>
+            </div>
+            <span class="material-symbols-outlined text-primary-clr" style="font-size:32px">layers</span>
+          </div>
+          <div class="d-flex flex-wrap gap-3">
+            <div class="tech-chip">
+              <span class="material-symbols-outlined text-primary-clr" style="font-size:20px">deployed_code</span>
+              <div><div class="chip-label">React.js</div><div class="chip-sub">Core Library</div></div>
+            </div>
+            <div class="tech-chip">
+              <span class="material-symbols-outlined text-primary-clr" style="font-size:20px">spellcheck</span>
+              <div><div class="chip-label">TypeScript</div><div class="chip-sub">Type System</div></div>
+            </div>
+            <div class="tech-chip">
+              <span class="material-symbols-outlined text-primary-clr" style="font-size:20px">dynamic_feed</span>
+              <div><div class="chip-label">Next.js</div><div class="chip-sub">Meta Framework</div></div>
+            </div>
+            <div class="tech-chip">
+              <span class="material-symbols-outlined text-primary-clr" style="font-size:20px">palette</span>
+              <div><div class="chip-label">TailwindCSS</div><div class="chip-sub">Styling Engine</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spatial Design (portrait) -->
+      <div class="col-lg-4 reveal">
+        <div class="bento-card card-3d h-100 position-relative overflow-hidden">
+          <div class="card-shine" style="border-radius:16px"></div>
+          <div class="position-relative" style="z-index:1">
+            <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:6px;">Spatial Design</h3>
+            <p class="text-muted-clr mb-4" style="font-size:.83rem;">Web-based 3D & immersive environments.</p>
+            <div class="d-flex flex-column gap-3">
+              <div class="d-flex align-items-center gap-3">
+                <div style="width:38px;height:38px;background:rgba(78,222,163,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                  <span class="material-symbols-outlined text-tertiary-clr" style="font-size:18px">view_in_ar</span>
+                </div>
+                <span style="font-weight:700;font-size:.9rem">Three.js</span>
+              </div>
+              <div class="d-flex align-items-center gap-3">
+                <div style="width:38px;height:38px;background:rgba(78,222,163,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                  <span class="material-symbols-outlined text-tertiary-clr" style="font-size:18px">polyline</span>
+                </div>
+                <span style="font-weight:700;font-size:.9rem">WebGL / GLSL</span>
+              </div>
+              <div class="d-flex align-items-center gap-3">
+                <div style="width:38px;height:38px;background:rgba(78,222,163,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center">
+                  <span class="material-symbols-outlined text-tertiary-clr" style="font-size:18px">draw</span>
+                </div>
+                <span style="font-weight:700;font-size:.9rem">GSAP / Motion</span>
+              </div>
+            </div>
+          </div>
+          <!-- Decorative bg icon -->
+          <span class="material-symbols-outlined position-absolute text-tertiary-clr"
+            style="font-size:140px;bottom:-20px;right:-20px;opacity:.07;z-index:0">view_in_ar</span>
+        </div>
+      </div>
+
+      <!-- Infrastructure -->
+      <div class="col-lg-5 reveal">
+        <div class="bento-card card-3d h-100 position-relative d-flex flex-column justify-content-between">
+          <div class="card-shine" style="border-radius:16px"></div>
+          <div>
+            <div style="width:46px;height:46px;background:rgba(173,198,255,0.12);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:20px">
+              <span class="material-symbols-outlined text-primary-clr" style="font-size:24px">memory</span>
+            </div>
+            <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:6px;">System Infrastructure</h3>
+            <p class="text-muted-clr mb-4" style="font-size:.83rem;">Server-side logic and persistent data management.</p>
+          </div>
+          <div class="d-flex flex-wrap gap-2">
+            <span class="skill-badge">Node.js</span>
+            <span class="skill-badge">PostgreSQL</span>
+            <span class="skill-badge">Redis</span>
+            <span class="skill-badge">GraphQL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Data Science -->
+      <div class="col-lg-7 reveal">
+        <div class="bento-card card-3d h-100 position-relative overflow-hidden">
+          <div class="card-shine" style="border-radius:16px"></div>
+          <div class="row g-4 h-100">
+            <div class="col-md-6 position-relative" style="z-index:1">
+              <h3 style="font-size:1.3rem;font-weight:700;margin-bottom:6px;">Data Science</h3>
+              <p class="text-muted-clr mb-4" style="font-size:.83rem;">Computational analysis and automation.</p>
+              <div style="padding:20px;background:rgba(6,14,32,0.7);border-radius:12px;border:1px solid var(--border)">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                  <span class="material-symbols-outlined text-tertiary-clr" style="font-size:18px">code</span>
+                  <span style="font-weight:700">Python</span>
+                </div>
+                <p class="text-muted-clr" style="font-size:.75rem;line-height:1.6">Pandas, NumPy, and Scikit-learn for structural data modeling.</p>
+              </div>
+            </div>
+            <div class="col-md-6" style="border-radius:12px;overflow:hidden;min-height:200px;position:relative">
+              <img style="width:100%;height:100%;object-fit:cover;position:absolute;inset:0;filter:grayscale(1) brightness(0.4);transition:filter .7s"
+                class="ds-img"
+                alt="Data Science Visual"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBA6HJJvH6L30f3Zb_ND75B1zbVybiVFq6sx6412x5Xx8MVFCZFKdz2RzB9RVrUQFq9DwEDpOwxdb4kBTPd4pQdvOCbD3BYYVke_WGJixoJugVwz06qEfKCEfICmxiOSbSd4uCLylqkZBh6lJBEbcF3GYafIjVilAg4KX2_w4CzZgVyk6AMAoNVPc_ajyJJOBrUVGBAOzcuDyu06lHFnebGSb8epEaKysp3Rgo_SCdbndh_7gzn_vN6dT_78PcNAcX0iHx4_BEeeIFs"
+                onerror="this.style.background='var(--surface-top)'" />
+              <div style="position:absolute;inset:0;background:linear-gradient(to top, var(--surface-high) 0%, transparent 60%)"></div>
+              <span style="position:absolute;bottom:12px;left:12px;font-size:10px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--primary)">Neural Node Network</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Terminal snippet -->
+    <div class="row mt-5 reveal">
+      <div class="col-12">
+        <div class="terminal-box">
+          <div class="terminal-header">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+            <span class="text-muted-clr ms-3" style="font-family:var(--font-mono);font-size:.75rem">dimensional_dev — bash — 80×24</span>
+          </div>
+          <div class="terminal-body">
+            <div><span class="t-prompt">~/portfolio</span> <span class="t-cmd">$ npm run build</span></div>
+            <div class="t-out">▶  Building production bundle...</div>
+            <div class="t-out">✓  Compiled 2,847 modules in 1.2s</div>
+            <div class="t-out">✓  Generating static pages: 12/12</div>
+            <div class="t-out" style="color:var(--tertiary)">✓  Build complete — 98/100 Lighthouse Score</div>
+            <div><span class="t-prompt">~/portfolio</span> <span class="t-cmd">$ git push origin main</span></div>
+            <div class="t-out">Enumerating objects: 47, done.</div>
+            <div><span class="t-prompt">~/portfolio</span> <span class="t-cursor"></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ CONTACT ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<section id="contact" style="background:linear-gradient(to bottom, var(--surface-low), var(--bg))">
+  <div class="grid-bg" style="opacity:.1"></div>
+  <div class="container position-relative" style="z-index:1">
+    <div class="row align-items-start g-5">
+
+      <!-- Left info -->
+      <div class="col-lg-5 reveal">
+        <span style="font-size:10px;letter-spacing:.3em;text-transform:uppercase;font-weight:700;" class="text-primary-clr d-block mb-4">INITIATE PROTOCOL</span>
+        <h2 style="font-size:clamp(2.5rem,6vw,5rem);font-weight:700;letter-spacing:-.04em;line-height:.95;margin-bottom:20px">
+          Let's<br><span class="gradient-text">Build.</span>
+        </h2>
+        <p class="text-muted-clr mb-5" style="font-size:1.05rem;line-height:1.7;max-width:380px;">
+          Ready to synthesize complex architectural requirements into elegant, high-performance systems. Layer by layer.
+        </p>
+
+        <div class="d-flex flex-column gap-4 mb-5">
+          <div class="d-flex align-items-start gap-4">
+            <div style="width:46px;height:46px;background:var(--surface-high);border-radius:12px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <span class="material-symbols-outlined text-primary-clr" style="font-size:20px">alternate_email</span>
+            </div>
+            <div>
+              <p style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Direct Uplink</p>
+              <p style="font-weight:600">hello@dimensional.dev</p>
+            </div>
+          </div>
+          <div class="d-flex align-items-start gap-4">
+            <div style="width:46px;height:46px;background:var(--surface-high);border-radius:12px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <span class="material-symbols-outlined text-tertiary-clr" style="font-size:20px">memory</span>
+            </div>
+            <div>
+              <p style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted);margin-bottom:4px">Architecture Sync</p>
+              <p style="font-weight:600">Available for select enterprise contracts.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-3">
+          <a href="#" class="social-btn" aria-label="GitHub">
+            <img alt="GitHub"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbBZhcAZ6Zedsn6OmmR_vMSrhC3Av09tNg7aS8ogwxYECClQxRWxXmLNlzqpp6AZ252cYtWmpVqko1-NleH_MeIqpvcyRB7Hpw5zu7zW_qEgQFt1VhbM16A4-PI-HA6XaztPIGanX0zb8pccJBcPbtYarXlwkhPAksgNtQIeZv-E2cRwxkifqPVIXACp7VB_IPWXP49Qcbe3ILivBDaB48fUD19VoSfAkOvO8rZUVd8ZuRn0Nn4qn_QT0TBQZVN34pVtHA7X5PlfI_"
+              onerror="this.src='https://via.placeholder.com/22x22/adc6ff/000?text=G'" />
+          </a>
+          <a href="#" class="social-btn" aria-label="LinkedIn">
+            <img alt="LinkedIn"
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-dAttCMFbderI-BznKZADXTgHt1RkggLxQmdwWZofL7KmnTr2CdIc5Fn2NhfxeaZfszt2z5aca0dd441ny_63dBUA5ud8t3JZgtrLxL7RQJp9LiVAL-7nbNZp8mEAWxHrEw5ZTyY5wr5wdm9A19KfdrVnyywcYE8BIzkmW7yjJCjdu1q7C3fmN-yrx5SV2ihaJ07o2H9R9UvhdRparTc3CC9qgKa-BKZcz81T2pvH9AAPQpW8Bpw_dP4L0WsqlsIeW83k8-Lmvro9"
+              onerror="this.src='https://via.placeholder.com/22x22/adc6ff/000?text=L'" />
+          </a>
+        </div>
+      </div>
+
+      <!-- Right form -->
+      <div class="col-lg-7 reveal">
+        <div class="glass-panel card-3d position-relative" style="border-radius:24px;padding:40px;box-shadow:0 40px 80px -20px rgba(0,0,0,0.5)">
+          <div class="card-shine" style="border-radius:24px"></div>
+          <!-- Decorative top line -->
+          <div style="position:absolute;top:0;left:50%;transform:translateX(-50%);width:120px;height:1px;background:linear-gradient(to right, transparent, var(--primary-dim), transparent)"></div>
+
+          <form id="contact-form" novalidate>
+            <div class="row g-4 mb-4">
+              <div class="col-md-6">
+                <label class="form-label">Identity Label</label>
+                <input class="form-field" type="text" placeholder="e.g. John Connor" required />
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Communication Channel</label>
+                <input class="form-field" type="email" placeholder="name@domain.com" required />
+              </div>
+            </div>
+            <div class="mb-4">
+              <label class="form-label">Project Classification</label>
+              <select class="form-field">
+                <option>System Architecture</option>
+                <option>Core Development</option>
+                <option>Cloud Infrastructure</option>
+                <option>Technical Consulting</option>
+              </select>
+            </div>
+            <div class="mb-5">
+              <label class="form-label">Transmission Content</label>
+              <textarea class="form-field" placeholder="Define the scope of the architectural challenge..." rows="5" style="resize:none" required></textarea>
+            </div>
+            <button type="submit" class="btn-primary" style="width:100%;font-size:1rem;letter-spacing:.1em">
+              Transmit Signal
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ FOOTER ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<footer>
+  <div class="container">
+    <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-4">
+      <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)">
+        © 2024 Designed in the Architectural Synth
+      </span>
+      <div class="d-flex gap-4">
+        <a href="#" class="footer-link">Github</a>
+        <a href="#" class="footer-link">LinkedIn</a>
+        <a href="#" class="footer-link">Documentation</a>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <div class="pulse-dot"></div>
+        <span style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--text-muted)">Systems Online</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- Toast -->
+<div id="toast">✓ Signal transmitted successfully</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━ GSAP INIT ━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+gsap.registerPlugin(ScrollTrigger);
+
+/* ── Scroll reveal ── */
+gsap.utils.toArray('.reveal').forEach((el, i) => {
+  gsap.fromTo(el,
+    { opacity: 0, y: 40 },
+    {
+      opacity: 1, y: 0,
+      duration: .9,
+      ease: 'power3.out',
+      scrollTrigger: {
+        trigger: el,
+        start: 'top 88%',
+        once: true,
+      },
+      delay: (i % 3) * 0.07
+    }
+  );
+});
+
+/* ── Hero entrance ── */
+gsap.from('.hero-title', { opacity: 0, y: 60, duration: 1.1, ease: 'power4.out', delay: .15 });
+gsap.from('.btn-primary, .btn-ghost', { opacity: 0, y: 30, duration: .8, ease: 'power3.out', stagger: .12, delay: .5 });
+gsap.from('.avatar-ring', { opacity: 0, scale: .85, duration: 1.2, ease: 'back.out(1.4)', delay: .3 });
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━ 3D CARD TILT (GSAP) ━━━━━━━━━━━━━━━━━━━━ */
+function init3DCards() {
+  document.querySelectorAll('.card-3d').forEach(card => {
+    const shine = card.querySelector('.card-shine');
+
+    card.addEventListener('mousemove', e => {
+      const rect = card.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = (e.clientX - cx) / (rect.width / 2);
+      const dy = (e.clientY - cy) / (rect.height / 2);
+
+      const rotX = -dy * 12;
+      const rotY =  dx * 12;
+
+      gsap.to(card, {
+        rotateX: rotX,
+        rotateY: rotY,
+        transformPerspective: 900,
+        duration: .35,
+        ease: 'power2.out',
+        overwrite: 'auto'
+      });
+
+      // Shine position
+      if (shine) {
+        const mx = ((e.clientX - rect.left) / rect.width * 100).toFixed(1);
+        const my = ((e.clientY - rect.top)  / rect.height * 100).toFixed(1);
+        card.style.setProperty('--mx', mx + '%');
+        card.style.setProperty('--my', my + '%');
+      }
+    });
+
+    card.addEventListener('mouseleave', () => {
+      gsap.to(card, {
+        rotateX: 0,
+        rotateY: 0,
+        duration: .6,
+        ease: 'elastic.out(1, .6)',
+        overwrite: 'auto'
+      });
+    });
+
+    // Click pop effect
+    card.addEventListener('mousedown', () => {
+      gsap.to(card, { scale: .97, duration: .1, ease: 'power2.out' });
+    });
+    card.addEventListener('mouseup', () => {
+      gsap.to(card, { scale: 1, duration: .4, ease: 'elastic.out(1,.7)' });
+    });
+  });
+}
+
+init3DCards();
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━ DATA SCIENCE IMG HOVER ━━━━━━━━━━━━━━━━━ */
+document.querySelectorAll('.bento-card').forEach(card => {
+  const img = card.querySelector('.ds-img');
+  if (!img) return;
+  card.addEventListener('mouseenter', () => gsap.to(img, { filter: 'grayscale(0) brightness(0.8)', duration: .5 }));
+  card.addEventListener('mouseleave', () => gsap.to(img, { filter: 'grayscale(1) brightness(0.4)', duration: .5 }));
+});
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━━━ NAV SCROLL ━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const navbar = document.getElementById('navbar');
+window.addEventListener('scroll', () => {
+  navbar.classList.toggle('scrolled', window.scrollY > 40);
+});
+
+/* Active nav link on scroll */
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-link-custom');
+
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(link => {
+        link.classList.toggle('active', link.getAttribute('href') === '#' + entry.target.id);
+      });
+    }
+  });
+}, { threshold: 0.35 });
+
+sections.forEach(s => observer.observe(s));
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━━ MOBILE MENU ━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const hamburger = document.getElementById('hamburger');
+const mobileMenu = document.getElementById('mobile-menu');
+
+hamburger.addEventListener('click', () => {
+  mobileMenu.classList.toggle('open');
+  const icon = hamburger.querySelector('.material-symbols-outlined');
+  icon.textContent = mobileMenu.classList.contains('open') ? 'close' : 'menu';
+});
+
+function closeMobileMenu() {
+  mobileMenu.classList.remove('open');
+  hamburger.querySelector('.material-symbols-outlined').textContent = 'menu';
+}
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━ PROJECT FILTER ━━━━━━━━━━━━━━━━━━━━━━━━━ */
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const filter = btn.dataset.filter;
+
+    document.querySelectorAll('#project-list article').forEach(card => {
+      const show = filter === 'all' || card.dataset.category === filter;
+      gsap.to(card, {
+        opacity: show ? 1 : 0.2,
+        scale:   show ? 1 : .97,
+        duration: .35,
+        ease: 'power2.out'
+      });
+    });
+  });
+});
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━ CONTACT FORM ━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+const form  = document.getElementById('contact-form');
+const toast = document.getElementById('toast');
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const inputs = form.querySelectorAll('[required]');
+  let valid = true;
+  inputs.forEach(inp => {
+    if (!inp.value.trim()) {
+      valid = false;
+      gsap.fromTo(inp,
+        { x: -6 },
+        { x: 0, duration: .4, ease: 'elastic.out(3,0.3)',
+          keyframes: [{ x:-6},{x:6},{x:-4},{x:4},{x:0}] }
+      );
+      inp.style.borderColor = '#ff5f57';
+    } else {
+      inp.style.borderColor = '';
+    }
+  });
+  if (!valid) return;
+
+  // Simulate send
+  const btn = form.querySelector('button[type="submit"]');
+  btn.textContent = 'Transmitting...';
+  btn.disabled = true;
+
+  setTimeout(() => {
+    btn.textContent = '✓ Transmitted';
+    form.reset();
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3500);
+    setTimeout(() => { btn.textContent = 'Transmit Signal'; btn.disabled = false; }, 3000);
+  }, 1200);
+});
+
+/* Live border feedback on focus */
+document.querySelectorAll('.form-field').forEach(f => {
+  f.addEventListener('focus', () => f.style.borderColor = '');
+});
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━ STAGGER STAT CARDS ━━━━━━━━━━━━━━━━━━━━━━ */
+gsap.from('.stat-card', {
+  opacity: 0, y: 50, stagger: .15, duration: .9, ease: 'power3.out',
+  scrollTrigger: { trigger: '.stat-card', start: 'top 85%', once: true }
+});
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━ FLOATING TAG PULSE ━━━━━━━━━━━━━━━━━━━━━━ */
+gsap.to('.floating-tag', {
+  y: -8,
+  duration: 2.4,
+  ease: 'sine.inOut',
+  yoyo: true,
+  repeat: -1,
+  stagger: 1.2
+});
+
+/* ━━━━━━━━━━━━━━━━━━━━━━━━ THREE.JS BACKGROUND ━━━━━━━━━━━━━━━━━━━━ */
+(function initThreeBackground() {
+  const canvas = document.getElementById('bg-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x000000, 0);
+
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, 0, 30);
+
+  /* ── Mouse tracking ── */
+  const mouse = { x: 0, y: 0, tx: 0, ty: 0 };
+  window.addEventListener('mousemove', e => {
+    mouse.tx = (e.clientX / window.innerWidth  - 0.5) * 2;
+    mouse.ty = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  /* ── Scroll tracking ── */
+  let scrollY = 0;
+  window.addEventListener('scroll', () => { scrollY = window.scrollY; });
+
+  /* ─────────────────────────────────────────────────────────
+     1. PARTICLE FIELD — thousands of tiny dots forming a nebula
+  ───────────────────────────────────────────────────────── */
+  const PARTICLE_COUNT = 3200;
+  const positions  = new Float32Array(PARTICLE_COUNT * 3);
+  const colors     = new Float32Array(PARTICLE_COUNT * 3);
+  const sizes      = new Float32Array(PARTICLE_COUNT);
+  const speeds     = new Float32Array(PARTICLE_COUNT);
+
+  const colorPalette = [
+    new THREE.Color(0x4d8eff),  // primary blue
+    new THREE.Color(0xadc6ff),  // light blue
+    new THREE.Color(0x4edea3),  // teal
+    new THREE.Color(0x1a3a6e),  // dark blue
+    new THREE.Color(0x0e5c3a),  // dark teal
+  ];
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    const i3 = i * 3;
+    // Spread across a wide volume
+    const r     = 20 + Math.random() * 60;
+    const theta = Math.random() * Math.PI * 2;
+    const phi   = Math.acos(2 * Math.random() - 1);
+
+    positions[i3]     = r * Math.sin(phi) * Math.cos(theta);
+    positions[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    positions[i3 + 2] = (Math.random() - 0.5) * 40;
+
+    const col = colorPalette[Math.floor(Math.random() * colorPalette.length)];
+    colors[i3]     = col.r;
+    colors[i3 + 1] = col.g;
+    colors[i3 + 2] = col.b;
+
+    sizes[i]  = 0.5 + Math.random() * 2.5;
+    speeds[i] = 0.2 + Math.random() * 0.8;
+  }
+
+  const particleGeo = new THREE.BufferGeometry();
+  particleGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  particleGeo.setAttribute('color',    new THREE.BufferAttribute(colors,    3));
+  particleGeo.setAttribute('size',     new THREE.BufferAttribute(sizes,     1));
+
+  // Circle texture for round particles
+  const particleCanvas = document.createElement('canvas');
+  particleCanvas.width = particleCanvas.height = 64;
+  const pCtx = particleCanvas.getContext('2d');
+  const grad = pCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0,   'rgba(255,255,255,1)');
+  grad.addColorStop(0.4, 'rgba(255,255,255,0.6)');
+  grad.addColorStop(1,   'rgba(255,255,255,0)');
+  pCtx.fillStyle = grad;
+  pCtx.fillRect(0, 0, 64, 64);
+  const particleTex = new THREE.CanvasTexture(particleCanvas);
+
+  const particleMat = new THREE.PointsMaterial({
+    size: 0.18,
+    map: particleTex,
+    vertexColors: true,
+    transparent: true,
+    opacity: 0.75,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    sizeAttenuation: true,
+  });
+
+  const particles = new THREE.Points(particleGeo, particleMat);
+  scene.add(particles);
+
+  /* ─────────────────────────────────────────────────────────
+     2. WIREFRAME ICOSAHEDRA — floating geometric shapes
+  ───────────────────────────────────────────────────────── */
+  const geoShapes = [];
+  const shapeData = [
+    { geo: new THREE.IcosahedronGeometry(3.5, 1),  pos: [-14, 6, -8],   speed: 0.003, col: 0x4d8eff },
+    { geo: new THREE.OctahedronGeometry(2.2, 0),    pos: [16, -5, -12],  speed: 0.005, col: 0x4edea3 },
+    { geo: new THREE.IcosahedronGeometry(1.8, 0),   pos: [8, 12, -6],   speed: 0.007, col: 0xadc6ff },
+    { geo: new THREE.TetrahedronGeometry(2.8, 0),   pos: [-18, -10, -5], speed: 0.004, col: 0x4d8eff },
+    { geo: new THREE.OctahedronGeometry(1.4, 0),    pos: [4, -14, -10],  speed: 0.009, col: 0x4edea3 },
+  ];
+
+  shapeData.forEach(d => {
+    const edges = new THREE.EdgesGeometry(d.geo);
+    const mat   = new THREE.LineBasicMaterial({
+      color: d.col,
+      transparent: true,
+      opacity: 0.18,
+      blending: THREE.AdditiveBlending,
+    });
+    const mesh = new THREE.LineSegments(edges, mat);
+    mesh.position.set(...d.pos);
+    mesh.userData = { speed: d.speed, offset: Math.random() * Math.PI * 2 };
+    scene.add(mesh);
+    geoShapes.push(mesh);
+  });
+
+  /* ─────────────────────────────────────────────────────────
+     3. NETWORK GRID — horizontal node-connection plane
+  ───────────────────────────────────────────────────────── */
+  const gridGroup = new THREE.Group();
+  const NODE_ROWS = 8, NODE_COLS = 14;
+  const nodePositions = [];
+
+  for (let r = 0; r < NODE_ROWS; r++) {
+    for (let c = 0; c < NODE_COLS; c++) {
+      const x = (c - NODE_COLS / 2) * 5 + (Math.random() - 0.5) * 2;
+      const y = (r - NODE_ROWS / 2) * 4 + (Math.random() - 0.5) * 2;
+      const z = -25 + (Math.random() - 0.5) * 6;
+      nodePositions.push(new THREE.Vector3(x, y, z));
+
+      // Node dot
+      const dotGeo = new THREE.SphereGeometry(0.06, 6, 6);
+      const dotMat = new THREE.MeshBasicMaterial({
+        color: Math.random() > 0.6 ? 0x4edea3 : 0x4d8eff,
+        transparent: true, opacity: 0.5,
+      });
+      const dot = new THREE.Mesh(dotGeo, dotMat);
+      dot.position.set(x, y, z);
+      dot.userData.baseOpacity = 0.3 + Math.random() * 0.5;
+      dot.userData.phase = Math.random() * Math.PI * 2;
+      gridGroup.add(dot);
+    }
+  }
+
+  // Draw edges between nearby nodes
+  const lineMat = new THREE.LineBasicMaterial({
+    color: 0x1a3a6e,
+    transparent: true,
+    opacity: 0.25,
+    blending: THREE.AdditiveBlending,
+  });
+  const lineGeo = new THREE.BufferGeometry();
+  const lineVerts = [];
+  for (let i = 0; i < nodePositions.length; i++) {
+    for (let j = i + 1; j < nodePositions.length; j++) {
+      const dist = nodePositions[i].distanceTo(nodePositions[j]);
+      if (dist < 7) {
+        lineVerts.push(nodePositions[i].x, nodePositions[i].y, nodePositions[i].z);
+        lineVerts.push(nodePositions[j].x, nodePositions[j].y, nodePositions[j].z);
+      }
+    }
+  }
+  lineGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(lineVerts), 3));
+  gridGroup.add(new THREE.LineSegments(lineGeo, lineMat));
+  scene.add(gridGroup);
+
+  /* ─────────────────────────────────────────────────────────
+     4. AMBIENT LIGHT ORBS — soft pulsing glows
+  ───────────────────────────────────────────────────────── */
+  const orbData = [
+    { pos: [-10, 8, -5],  col: 0x1a4aff, size: 0.8 },
+    { pos: [12, -6, -8],  col: 0x00c87a, size: 0.6 },
+    { pos: [0, -2, -3],   col: 0x2255cc, size: 0.4 },
+  ];
+  const orbs = orbData.map(d => {
+    const g = new THREE.SphereGeometry(d.size, 16, 16);
+    const m = new THREE.MeshBasicMaterial({
+      color: d.col,
+      transparent: true,
+      opacity: 0.07,
+      blending: THREE.AdditiveBlending,
+    });
+    const mesh = new THREE.Mesh(g, m);
+    mesh.position.set(...d.pos);
+    mesh.userData.phase = Math.random() * Math.PI * 2;
+    scene.add(mesh);
+    return mesh;
+  });
+
+  /* ─────────────────────────────────────────────────────────
+     RESIZE HANDLER
+  ───────────────────────────────────────────────────────── */
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
+  /* ─────────────────────────────────────────────────────────
+     ANIMATION LOOP
+  ───────────────────────────────────────────────────────── */
+  let frame = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    frame++;
+    const t = frame * 0.01;
+
+    // Smooth mouse follow for camera parallax
+    mouse.x += (mouse.tx - mouse.x) * 0.04;
+    mouse.y += (mouse.ty - mouse.y) * 0.04;
+
+    camera.position.x = mouse.x * 3;
+    camera.position.y = -mouse.y * 1.5 - scrollY * 0.004;
+    camera.lookAt(0, -scrollY * 0.004, 0);
+
+    // Rotate particle field slowly
+    particles.rotation.y = t * 0.04;
+    particles.rotation.x = t * 0.015;
+
+    // Pulse individual particles (twinkle effect via opacity)
+    particleMat.opacity = 0.6 + Math.sin(t * 1.5) * 0.15;
+
+    // Rotate wireframe shapes
+    geoShapes.forEach((shape, i) => {
+      shape.rotation.x += shape.userData.speed * 0.7;
+      shape.rotation.y += shape.userData.speed;
+      shape.rotation.z += shape.userData.speed * 0.4;
+      // Drift up/down
+      shape.position.y += Math.sin(t + shape.userData.offset) * 0.008;
+    });
+
+    // Pulse network node dots
+    gridGroup.children.forEach(child => {
+      if (child.isMesh) {
+        child.material.opacity = child.userData.baseOpacity * (0.6 + 0.4 * Math.sin(t * 1.2 + child.userData.phase));
+      }
+    });
+
+    // Pulse grid slightly
+    gridGroup.rotation.x = Math.sin(t * 0.2) * 0.03;
+    gridGroup.rotation.y = mouse.x * 0.06;
+
+    // Pulse ambient orbs
+    orbs.forEach((orb, i) => {
+      orb.material.opacity = 0.05 + 0.04 * Math.sin(t * 0.8 + orb.userData.phase);
+      const s = 1 + 0.15 * Math.sin(t * 0.6 + orb.userData.phase);
+      orb.scale.setScalar(s);
+    });
+
+    renderer.render(scene, camera);
+  }
+
+  animate();
+})();
+</script>
+</body>
+</html>
