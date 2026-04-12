@@ -48,5 +48,4 @@ Hi, I'm **Priyanshu Mahato** 👋
 
 ---
 
-## 📂 Project Structure
 
