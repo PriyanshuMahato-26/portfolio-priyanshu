@@ -2,7 +2,7 @@
 Priyanshu Portfolio Site
 Link :- https://priyanshumahato-26.github.io/portfolio-priyanshu/
 
-# 🚀 Priyanshu Mahato – 3D Portfolio Website
+# 🚀 Priyanshu Mahato – Portfolio Website
 
 Welcome to my personal portfolio website!  
 This project showcases my skills, projects, and experience as a **Full Stack Developer & Embedded Systems Enthusiast**.
